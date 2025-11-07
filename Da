@@ -1,0 +1,250 @@
+// src/page/Dashboard.tsx
+import { useState } from "react";
+import Box from "@mui/material/Box";
+import { useUsers } from "../hooks/useGetUser";
+import Typography from "@mui/material/Typography";
+import Stack from "@mui/material/Stack";
+import Divider from "@mui/material/Divider";
+import TableContainer from "@mui/material/TableContainer";
+import Table from "@mui/material/Table";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import TableCell from "@mui/material/TableCell";
+import TableBody from "@mui/material/TableBody";
+import Avatar from "@mui/material/Avatar";
+import Paper from "@mui/material/Paper";
+import IconButton from "@mui/material/IconButton";
+import Button from "@mui/material/Button";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import LogoutIcon from "@mui/icons-material/Logout";
+import { UserFormDialog } from "../components/UserDialog";
+import { ConfirmDialog } from "../components/ConfirmeDialog";
+import type { Iuser, User } from "../types/user.type";
+import { useAuthStore } from "../store/authstore";
+import { useNavigate } from "react-router-dom";
+
+export const Dashboard = () => {
+  const { users, loading, error, addUser, update, deleted } = useUsers();
+  const { logout, user } = useAuthStore();
+  const navigate = useNavigate();
+  const [openDialog, setOpenDialog] = useState(false);
+  const [openConfirm, setOpenConfirm] = useState(false);
+  const [editingUser, setEditingUser] = useState<Iuser | null>(null);
+  const [userToDelete, setUserToDelete] = useState<number | null>(null);
+
+  const handleOpenDialog = (user?: Iuser) => {
+    if (user) {
+      setEditingUser(user);
+    } else {
+      setEditingUser(null);
+    }
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setEditingUser(null);
+  };
+
+  const handleSubmit = async (userData: User) => {
+    if (editingUser && editingUser.id) {
+      await update(userData as Iuser, editingUser.id);
+    } else {
+      await addUser(userData as Iuser);
+    }
+    handleCloseDialog();
+  };
+
+  const handleOpenConfirm = (id: number) => {
+    setUserToDelete(id);
+    setOpenConfirm(true);
+  };
+
+  const handleCloseConfirm = () => {
+    setOpenConfirm(false);
+    setUserToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (userToDelete) {
+      await deleted(userToDelete);
+      handleCloseConfirm();
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", backgroundColor: "#1f2937" }}>
+        <Typography variant="h6" sx={{ color: "#9ca3af" }}>
+          Cargando usuarios...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", backgroundColor: "#1f2937" }}>
+        <Typography variant="h6" sx={{ color: "#ef4444" }}>
+          {error}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 4, backgroundColor: "#1f2937", minHeight: "100vh" }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+        <Stack>
+          <Typography variant="h4" fontWeight="bold" sx={{ color: "#f3f4f6" }}>
+            Panel de Usuarios
+          </Typography>
+          {user && (
+            <Typography variant="body2" sx={{ color: "#9ca3af", mt: 0.5 }}>
+              Bienvenido, {user.first_name} {user.last_name}
+            </Typography>
+          )}
+        </Stack>
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+            sx={{
+              backgroundColor: "#374151",
+              "&:hover": { backgroundColor: "#4b5563" },
+              textTransform: "none",
+              fontWeight: "bold",
+            }}
+          >
+            Nuevo Usuario
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+            sx={{
+              borderColor: "#4b5563",
+              color: "#f3f4f6",
+              "&:hover": { 
+                backgroundColor: "#374151",
+                borderColor: "#6b7280"
+              },
+              textTransform: "none",
+              fontWeight: "bold",
+            }}
+          >
+            Cerrar Sesión
+          </Button>
+        </Stack>
+      </Stack>
+
+      <Divider sx={{ mb: 3, backgroundColor: "#4b5563" }} />
+
+      <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 2, backgroundColor: "#374151" }}>
+        <Table>
+          <TableHead sx={{ backgroundColor: "#1f2937" }}>
+            <TableRow>
+              <TableCell sx={{ color: "#f3f4f6", fontWeight: "bold" }}>ID</TableCell>
+              <TableCell sx={{ color: "#f3f4f6", fontWeight: "bold" }}>Nombre</TableCell>
+              <TableCell sx={{ color: "#f3f4f6", fontWeight: "bold" }}>Correo</TableCell>
+              <TableCell sx={{ color: "#f3f4f6", fontWeight: "bold" }}>Teléfono</TableCell>
+              <TableCell sx={{ color: "#f3f4f6", fontWeight: "bold" }}>Tipo de Documento</TableCell>
+              <TableCell sx={{ color: "#f3f4f6", fontWeight: "bold" }} align="center">
+                Acciones
+              </TableCell>
+            </TableRow>
+          </TableHead>
+
+          <TableBody>
+            {users.length > 0 ? (
+              users.map((user) => (
+                <TableRow
+                  key={user.id}
+                  hover
+                  sx={{
+                    transition: "background-color 0.2s ease",
+                    "&:hover": { backgroundColor: "#4b5563" },
+                  }}
+                >
+                  <TableCell sx={{ color: "#e5e7eb" }}>{user.id}</TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Avatar sx={{ bgcolor: "#6b7280", width: 32, height: 32 }}>
+                        {user.first_name.charAt(0).toUpperCase()}
+                      </Avatar>
+                      <Typography sx={{ color: "#e5e7eb" }}>
+                        {user.first_name} {user.last_name}
+                      </Typography>
+                    </Stack>
+                  </TableCell>
+                  <TableCell sx={{ color: "#e5e7eb" }}>{user.email}</TableCell>
+                  <TableCell sx={{ color: "#e5e7eb" }}>{user.phone || "—"}</TableCell>
+                  <TableCell sx={{ color: "#e5e7eb" }}>
+                    {user.document_type
+                      ? `${user.document_type.abbreviation} - ${user.document_type.name}`
+                      : "No asignado"}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Stack direction="row" spacing={1} justifyContent="center">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenDialog(user)}
+                        sx={{
+                          color: "#9ca3af",
+                          "&:hover": { color: "#e5e7eb", backgroundColor: "#4b5563" },
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => user.id && handleOpenConfirm(user.id)}
+                        sx={{
+                          color: "#9ca3af",
+                          "&:hover": { color: "#ef4444", backgroundColor: "#4b5563" },
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                  <Typography sx={{ color: "#9ca3af", fontStyle: "italic" }}>
+                    No hay usuarios registrados
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <UserFormDialog
+        open={openDialog}
+        onclose={handleCloseDialog}
+        onsubmit={handleSubmit}
+        editingUser={editingUser}
+      />
+
+      <ConfirmDialog
+        open={openConfirm}
+        onClose={handleCloseConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Eliminar Usuario"
+        message="¿Está seguro que desea eliminar este usuario? Esta acción no se puede deshacer."
+      />
+    </Box>
+  );
+};
